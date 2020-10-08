@@ -137,14 +137,14 @@
 \section{Question 1}
 The aim of this task is to design a digital controlled system with some requirements, small steady state error, small settling time, minimum input action, and minimum overshoot. 
 
-The plant to be studied is written as follows,
+The plant to be studied is,
 \begin{align}
 G_p(s) &= \dfrac{0.04(s+1)}{s^2+0.2s+0.04} \\
 \intertext{and the digital controller should have the form,}
 D(z) &= K\dfrac{z-A}{z-B}
 \end{align}
 
-Fig.\ref{fig:Q1_Gp} shows that the plant is very slow and with a relatively big overshoot. Therefore, a phase margin ($PM$) of $60\degree$ can be the unique requirement. As long as the compensated phase margin is around that value, the settling time and overshoot should be minimized as much as possible.
+Fig.\ref{fig:Q1_Gp} shows that the plant is very slow with a big overshoot. A phase margin ($PM$) of $60\degree$ can be the unique requirement. As long as the compensated phase margin is around that value, the settling time and overshoot should be minimized as much as possible.
  
 \begin{figure}[H]
 	\centering
@@ -225,7 +225,7 @@ margin(Gp1);
 saveas(fig,'Q1_Gp1_K_margin.png');
 \end{lstlisting}
 
-\textbf{Step 2.} The digital uncompensated $G_{z1}$ plant of $G_{p1}$ can be calculated using a zero-order holder with a sampling time $T_s=0.01$.
+\textbf{Step 2.} The digital uncompensated plant $G_{z1}$ of $G_{p1}$ can be calculated using a zero-order holder with a sampling time $T_s=0.01$.
 \begin{align}
 G_{z1} &= 1.01\cdot10^{-3}\frac{z-0.99}{z^2-1.99z+0.99}
 \end{align} 
@@ -238,6 +238,21 @@ In Fig. \ref{fig:Q1_Gz1_K_step} it can be seen that the continuous and discrete 
 	\label{fig:Q1_Gz1_K_step}
 \end{figure}
 
+The following Matlab scripts simulates the previous results.
+\begin{lstlisting}[language=matlab, caption={}, label={}]
+%% Digital uncompensated system with the new gain K
+Ts = 0.01; % sampling time
+Gz1 = c2d(Gp1,Ts,'zoh'); % convert the continuos time plant Gp2 to the
+% discrete time domain with the zero order holder
+Gp1_cl = feedback(Gp1,1); % closed-loop system in continuos time
+Gz1_cl = feedback(Gz1,1); % closed-loop system in discrete time
+
+fig = figure(3);
+step(Gp1_cl,Gz1_cl); % step response of both continuos and discrete systems
+saveas(fig,'Q1_Gpz_K_step.png');
+stepinfo(Gz1_cl) % system performance values
+\end{lstlisting}
+
 \textbf{Step 3.} With the desired phase margin, the value of $\beta$ can be calculated as follows,
 \begin{align}
 PM_{act}- & PM_d+\theta = \arctan\dfrac{\beta-1}{2\sqrt{\beta}}
@@ -247,7 +262,7 @@ where $PM_{act}$ is the actual phase margin of the uncompensated plant $G_{p1}$,
 After some operations,
 \begin{align}
 \beta^2- & \beta\left[2+4\left(\tan(PM_d-PM_{act}+\theta)\right)\right] +1 = 0 \nonumber\\
-\intertext{if $\theta=6\degree$, $PM_d=60\degree$, and $PM_{act}=61.25\degree$ obtained from Fig. \ref{fig:Q2_Gp2_margin}, $\beta$ will be,}
+\intertext{if $\theta=6\degree$, $PM_d=60\degree$, and $PM_{act}=61.25\degree$ obtained from Fig. \ref{fig:Q2_Gp2_margin}. The $\beta$ will be,}
 &\qquad \beta = 1.18 \nonumber
 \end{align}
 
@@ -264,7 +279,7 @@ After some operations,
 \left| G_{p1}(j\omega_c) \right| &= \dfrac{1}{\sqrt{\beta}} \\
 \intertext{if we use the peak magnitude $M_{pc}$ relation,}
 M_{pc} &= \dfrac{1}{\sqrt{\beta}} \\
-\intertext{and using \texttt{getGainCrossover(Gp2,Mpc)} on Matlab,}
+\intertext{and using \texttt{getGainCrossover(Gp2,Mpc)} command on Matlab,}
 \omega_c& = 1.37 ~rad/sec \nonumber
 \end{align}
 
@@ -296,7 +311,7 @@ Fig. \ref{fig:Q1_lead} shows that the compensated system using a Phase-Lead cont
 The following Matlab script simulates and evaluates the previous design.
 \begin{lstlisting}[language=matlab, caption={}, label={}]
 %% Designing the Phase-lead digital controller 
-% introducing a new gain 10 times faster in ordert to obtain a fast
+% introducing a new gain 10 times faster in order to obtain a fast
 % response to the step input
 Gp2 = K*10*Gp;
 
@@ -335,26 +350,44 @@ saveas(fig,'Q1_lead_step.png');
 \end{lstlisting}
 
 \section{Question 2}
-The deadbeat controller is a type of controller that reaches zero error very fast at the sampling instants in the discrete domain systems, but it can not be used in continuous time, \cite{Westphal2012}. Another characteristics are that the control signal is very high, and the overshoot is less than 2\%.
+The deadbeat controller approach finds an input signal in order to bring the output to the steady-state in the smallest number of time steps \cite{Westphal2012}. It has some characteristics:
+\Activate
+\begin{easylist}[itemize] \ListProperties(Space1=0cm,Space1*=0cm,Space2=0cm,Space2*=0cm)
+	& Zero steady-state error. 	
+	& Minimum rise time.
+	& Minimum settling time
+	& Less than 2\% overshoot/undershoot.
+	& Very high control signal output.
+	& Can not be used in continuous time.
+\end{easylist}
+\Deactivate
 
 As long as the plant $G(z)$ has all zeros and poles inside the unit circle (minimum phase), the plant can be written as,
-\begin{align}
+\begin{align*}
 G(z) &= \dfrac{z^{d} B(z)}{A(z)} = \dfrac{z^{d}(b_o + b_1 z^{-1}+...+b_m z^{-m})}{1+a_1 z^{-1} + ... + a_n z^{-n}}, \quad d=n-m>0
-\end{align}
-the digital deadbeat will have the following transfer function,
+\end{align*}
+with an step input $r(k)$, the deadbeat response requirement implies,
+\begin{align*}
+	M(z) &= z^{-d}
+\end{align*} 
+
+The digital deadbeat will have the following transfer function,
 \begin{align}
 D(z) &= \dfrac{A(z)}{z^{-d}B(z)}~\dfrac{z^{-d}}{1-z^{-d}}\\
 \intertext{and the closed-loop system is,}
-Y(z) &= z^{-d} U(z)
+Y(z) &= z^{-d} U(z) \nonumber \\
+\intertext{which means,}
+y(k) &= u(k-d) \nonumber
 \end{align}
+So when $u(k)$ is a step input, the output will be d-step delay of the same signal.
 
 
 The aim of this question is to design a digital deadbeat controller for the plant,
-\begin{align}
+\begin{align*}
 G_p(s) &= \dfrac{0.04(s+1)}{s^2+0.2s+0.04} \\
-G_p(z) &= \dfrac{5.47\cdot 10^{-2}(z-0.34)}{z^2 - 1.78z + 0.82}
-\end{align}
-with a the sampling time $T_s=1$.
+G_p(z) &= \dfrac{5.47\times 10^{-2}(z-0.34)}{z^2 - 1.78z + 0.82}
+\end{align*}
+with sampling time $T_s=1$.
 
 After using the following code in Matlab.
 \begin{lstlisting}[language=tex, caption={}, label={}]
@@ -382,12 +415,12 @@ step(Dz/(1+Dz*Gz)) % control signal
 saveas(fig,'Q2_deadbeat_control.png');
 \end{lstlisting}
 
-The closed-loop discrete system is as follows,
-\begin{align}
+The closed-loop discrete system is,
+\begin{align*}
 G_{clz} &= \dfrac{(z-1) (z-0.3392)^2 (z^2 - 1.783z + 0.8187)^2} {z (z-0.3392)^2 (z-1) (z^2 - 1.783z + 0.8187)^2} \\
 \intertext{where the controller is,}
 G_{cz} &= \dfrac{18.288 (z-1) (z-0.3392) (z^2 - 1.783z + 0.8187)^2}{z (z-0.3392)^2 (z-1) (z^2 - 1.783z + 0.8187)}
-\end{align}
+\end{align*}
 
 Fig. \ref{fig:Q2_deadbeat} shows the output of the deadbeat controller and the closed-loop system response to a unit step input. It shows clearly that the steady-state error reaches zero value at the first sampled time.
 
